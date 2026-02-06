@@ -31,12 +31,12 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.873319001597-js4sce3520afm8rh0glf3s1b7k0semm4"
-        }
-      ],
+      // [
+      //   "@react-native-google-signin/google-signin",
+      //   {
+      //     "iosUrlScheme": "com.googleusercontent.apps.873319001597-js4sce3520afm8rh0glf3s1b7k0semm4"
+      //   }
+      // ],
       "expo-router",
       [
         "expo-splash-screen",

@@ -1,6 +1,6 @@
 import apiClient from '../api/apiClient';
 import { secureStorage } from '../utils/secureStorage';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+//import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 import {
   LoginCredentials,
@@ -12,10 +12,16 @@ import {
 import { Platform } from 'react-native';
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.example.com';
 
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID, // from Google Cloud
-  offlineAccess: true, // if you want a refresh token
-});
+// GoogleSignin.configure({
+//   webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID, // from Google Cloud
+//   offlineAccess: true, // if you want a refresh token
+// });
+import * as Google from 'expo-auth-session/providers/google';
+
+const [request, response, promptAsync] =
+  Google.useIdTokenAuthRequest({
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  });
 export const authService = {
   
   // Login
@@ -122,20 +128,84 @@ export const authService = {
     }
   },
   // // Google Sign-In
+  // signInWithGoogle: async (): Promise<any> => {
+  //   try {
+  //     // Check for Play Services (Android)
+  //     await GoogleSignin.hasPlayServices();
+  //     const userInfo = await GoogleSignin.signIn();
+  //     // Get user info and ID token
+  //     const tokens = await GoogleSignin.getTokens(); // ✅ Use this to get idToken
+  //     const idToken = tokens.idToken;
+
+  //     if (!idToken) {
+  //       throw new Error('No ID token received from Google');
+  //     }
+
+  //     // Verify with backend
+  //     const response = await fetch(`${API_URL}/auth/google/verify`, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         idToken,
+  //         provider: 'google',
+  //       }),
+  //     });
+
+  //     const data = await response.json();
+
+  //     if (!response.ok) {
+  //       throw new Error(data.message || 'Authentication failed');
+  //     }
+
+  //     // Save tokens and user data
+  //     await secureStorage.saveAuthData(
+  //       data.accessToken,
+  //       data.refreshToken,
+  //       data.user
+  //     );
+
+  //     return {
+  //       success: true,
+  //       user: data.user,
+  //       isNewUser: data.isNewUser,
+  //       requiresProfileSetup: data.requiresProfileSetup,
+  //     };
+  //   } catch (error:any) {
+  //     console.error('Google Sign-In Error:', error);
+      
+  //     // Handle specific error codes
+  //     if (error.code === 'SIGN_IN_CANCELLED') {
+  //       return { success: false, cancelled: true };
+  //     } else if (error.code === 'IN_PROGRESS') {
+  //       return { success: false, error: 'Sign-in already in progress' };
+  //     } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
+  //       return { success: false, error: 'Google Play Services not available' };
+  //     }
+      
+  //     return { success: false, error: error.message || 'Failed to sign in with Google' };
+  //   }
+  // },
   signInWithGoogle: async (): Promise<any> => {
     try {
-      // Check for Play Services (Android)
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      // Get user info and ID token
-      const tokens = await GoogleSignin.getTokens(); // ✅ Use this to get idToken
-      const idToken = tokens.idToken;
+      const result = await promptAsync();
+
+      if (result.type === 'dismiss' || result.type === 'cancel') {
+        return { success: false, cancelled: true };
+      }
+
+      if (result.type !== 'success') {
+        throw new Error('Google authentication failed');
+      }
+
+      const idToken = result.params.id_token;
 
       if (!idToken) {
         throw new Error('No ID token received from Google');
       }
 
-      // Verify with backend
+      // ✅ Same backend call (unchanged)
       const response = await fetch(`${API_URL}/auth/google/verify`, {
         method: 'POST',
         headers: {
@@ -153,7 +223,7 @@ export const authService = {
         throw new Error(data.message || 'Authentication failed');
       }
 
-      // Save tokens and user data
+      // ✅ Same secure storage
       await secureStorage.saveAuthData(
         data.accessToken,
         data.refreshToken,
@@ -166,19 +236,13 @@ export const authService = {
         isNewUser: data.isNewUser,
         requiresProfileSetup: data.requiresProfileSetup,
       };
-    } catch (error:any) {
-      console.error('Google Sign-In Error:', error);
-      
-      // Handle specific error codes
-      if (error.code === 'SIGN_IN_CANCELLED') {
-        return { success: false, cancelled: true };
-      } else if (error.code === 'IN_PROGRESS') {
-        return { success: false, error: 'Sign-in already in progress' };
-      } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
-        return { success: false, error: 'Google Play Services not available' };
-      }
-      
-      return { success: false, error: error.message || 'Failed to sign in with Google' };
+
+    } catch (error: any) {
+      console.error('Google OAuth Error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to sign in with Google',
+      };
     }
   },
   // // Apple Sign-In (iOS only)
